@@ -1,15 +1,32 @@
 <?php
 	require 'cnx.php';
+	$prenoms = array('Arthur', 'Arnaud', 'Aubin', 'Ariel', 'Charly', 'Eve', 'Estelle', 'Mathieu');
+	$datas = $cnx->query("SELECT * FROM choice ORDER by id DESC")->fetchAll(); 
+	if(empty($datas)){
+		for ($i = 0; $i < count($prenoms); $i++) { 
+			$q = array('id' => $i + 1, 'name' => $prenoms[$i]);
+			$sql = "INSERT INTO choice (id, name) VALUES (:id, :name)";
+			$req_1 = $cnx->prepare($sql);
+			$req_1->execute($q);	
+		}
+	} else {
+		$id_array = array();
+		for ($i= 0 ; $i < count($datas); $i++) { 
+			array_push($id_array, intval($datas[$i]['id']));
+		}
+		$id = array_rand($id_array, 1);
 
-	$prenoms = array('Arthur', 'Arnaud','Aubin', 'Ariel', 'Charly', 'Eve', 'Estelle', 'Mathieu', 'Titouan');
-	$already_choose = array();
-	$choix = rand(0, count($prenoms));
+		$q = array('id' => $id_array[$id]);
+		$sql = "SELECT name FROM choice WHERE id = :id";
+		$req_2 = $cnx->prepare($sql);
+		$req_2->execute($q);
+		$data = $req_2->fetch();
 
-    $q = array('name' => $prenoms[$choix]);
-    $req = $cnx->prepare("INSERT INTO already_choose (name) VALUES (:name)");
-    $req->execute($q);
-
-    $rand = $cnx->query("SELECT * FROM already_choose ORDER BY id DESC LIMIT 2")->fetchAll();   
+		$q = array('id' => $id_array[$id]);
+		$sql = "DELETE FROM choice WHERE id = :id";
+		$req_3 = $cnx->prepare($sql); 
+		$req_3->execute($q);	
+	}
 ?>
 
 <html>
@@ -24,25 +41,19 @@
 		<header>
 			<span>C'est au tour de...</span>
 			<span>
-				<?php
-					if($rand[0]['name'] == $rand[1]['name']){
-						if($rand[0]['name'] == "Estelle" || $rand[0]['name'] == "Eve"){
-							$pronom = "elle";
-						} else {
-							$pronom = "il";
-						}
-						echo $rand[0]['name'] . ' mais ' . $pronom .' a déjà été sélectionné lors du dernier tirage au sort.';
+				<?php 
+					if(is_null($data['name'])){
+						echo "Vous êtes arrivé à la fin de la liste, rechargez la page pour en générer une nouvelle.";
 					} else {
-						echo $rand[0]['name'];
+						echo $data['name'];
 					}
 				?>
 			</span>
-		</header>
-		<section>
 			<button id="reload">
 				<i class="fas fa-sync-alt"></i>
 			</button>
-		</section>
+		</header>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 		<script type="text/javascript" src="js/app.js"></script>
 	</body>
 </html>
